@@ -1,0 +1,45 @@
+version: '3'
+services:
+  ipfs:
+    image: ipfs/kubo:latest
+    environment:
+      - IPFS_PROFILE=server
+      - IPFS_PATH=/ipfsdata
+    volumes:
+      - /var/lib/ipfs:/ipfsdata
+    ports:
+      - "4001:4001"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:5001:5001"
+  
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: uploadverse
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    environment:
+      GIN_MODE: debug
+      POSTGRES_DSN: "host=db user=postgres password=postgres dbname=uploadverse sslmode=disable"
+      SERVER_ADDRESS: 0.0.0.0:8781
+      IPFS_NODE: ipfs:5001
+    ports:
+      - "8781:8781"
+    depends_on:
+      - db
+      - ipfs
+
+volumes:
+  pgdata:
